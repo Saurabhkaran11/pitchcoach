@@ -4,6 +4,8 @@
 
 Built in one hour at [OSS4AI: Build an AI Startup in One Day](https://luma.com/oss4ai-fdvg) · Voice AI Track
 
+> 🎬 **2-min demo video:** [demo.mp4](demo.mp4) · **Instant scored demo:** https://saurabhkaran11.github.io/pitchcoach/?demo=1&qa=1&skin=glass
+>
 > 👉 **Live demo:** https://saurabhkaran11.github.io/pitchcoach/ — no signup. Hit **▶ Try a demo pitch** to see it work in 5 seconds.
 
 ---
