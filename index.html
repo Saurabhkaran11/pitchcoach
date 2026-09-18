@@ -187,7 +187,7 @@ const setSkin=k=>{document.documentElement.dataset.skin=k;LS.skin=k;document.que
 setSkin(cfg('skin')||'aurora');$('skins').onclick=e=>e.target.dataset.s&&setSkin(e.target.dataset.s);
 // URL params for judges/demos: ?skin=glass&demo=1 (auto-runs the demo pitch) &qa=1 (also opens Q&A)
 const Q=new URLSearchParams(location.search);if(Q.get('skin'))LS.skin=Q.get('skin');
-addEventListener('load',()=>{if(Q.get('skin'))setSkin(Q.get('skin'));if(Q.get('demo')){$('demo').click();if(Q.get('qa'))setTimeout(()=>$('qa').click(),1500)}});
+addEventListener('load',()=>{if(location.hostname.endsWith('vercel.app'))document.querySelector('details:not(#typebox)').hidden=true;if(Q.get('skin'))setSkin(Q.get('skin'));if(Q.get('demo')){$('demo').click();if(Q.get('qa'))setTimeout(()=>$('qa').click(),1500)}});
 const step=n=>document.querySelectorAll('.steps span').forEach((s,i)=>s.classList.toggle('on',i<=n));
 const toast=m=>{$('toast').textContent=m;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',4000)};
 
@@ -329,11 +329,14 @@ $('png').onclick=()=>{if(!last)return;const c=document.createElement('canvas');c
 const b64=blob=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result.split(',')[1]);f.readAsDataURL(blob)});
 async function speak(t,clone=false){
   if(!t)return;
-  if(cfg("boson")){
+  // key in browser → call Boson directly; no key → same-origin /api/tts (Vercel proxy holding BOSON_KEY)
+  const onVercel=location.hostname.endsWith('vercel.app');
+  if(cfg("boson")||onVercel){
     try{
       const body={input:t,model:'higgs-tts-3',voice:'default',response_format:'mp3'};
       if(clone&&refAudio){body.ref_audio=await b64(refAudio);body.ref_text=pitchText}
-      const r=await fetch('https://api.boson.ai/v1/audio/speech',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+cfg("boson")},body:JSON.stringify(body)});
+      const direct=!!cfg("boson");
+      const r=await fetch(direct?'https://api.boson.ai/v1/audio/speech':'api/tts',{method:'POST',headers:direct?{'content-type':'application/json',authorization:'Bearer '+cfg("boson")}:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok)throw new Error(r.status);
       new Audio(URL.createObjectURL(await r.blob())).play();return;
     }catch(e){toast('Boson TTS failed, using browser voice')}
