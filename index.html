@@ -154,7 +154,7 @@
 
 <details>
   <summary>Model settings</summary>
-  <input id="base" placeholder="Base URL e.g. https://api.studio.nebius.com/v1">
+  <input id="base" placeholder="Base URL e.g. https://api.tokenfactory.nebius.com/v1">
   <input id="key" placeholder="API key" type="password">
   <input id="model" placeholder="Model e.g. meta-llama/Llama-3.3-70B-Instruct">
   <input id="boson" placeholder="Boson AI key (Higgs TTS 3) — optional" type="password">
@@ -165,7 +165,7 @@
 <script>
 const $=id=>document.getElementById(id);
 let LS;try{LS=window.localStorage;LS.length}catch{LS={}} // opaque origins (data:/sandbox) throw on localStorage
-const DEF={base:'https://api.studio.nebius.com/v1',model:'meta-llama/Llama-3.3-70B-Instruct'};
+const DEF={base:'https://api.tokenfactory.nebius.com/v1',model:'meta-llama/Llama-3.3-70B-Instruct'};
 const cfg=k=>LS[k]||DEF[k]||'';
 for(const k of['base','key','model','boson']){$(k).value=cfg(k);$(k).oninput=()=>LS[k]=$(k).value}
 if(cfg('base')&&cfg('key'))$('setup').remove();$('openset')?.addEventListener('click',e=>{e.preventDefault();document.querySelector('details').open=true;$('base').focus()});

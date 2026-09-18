@@ -28,7 +28,7 @@ Founders practice their pitch in the mirror. The mirror doesn't tell you your ho
 - **Zero friction.** One HTML file. No install, no backend, no account. Works on a phone.
 - **Built on the sponsors' stack:**
   - **Boson AI — Higgs TTS 3** for speech and one-shot voice cloning (`ref_audio`)
-  - **Nebius AI Studio** for the investor brain (scoring, rewrite, Q&A)
+  - **Nebius Token Factory** for the investor brain (scoring, rewrite, Q&A)
 
 ## Try it in 60 seconds
 
@@ -65,7 +65,7 @@ Already in the app: free-tier limit, Pro waitlist, privacy note, sponsor default
 |---|---|
 | **Innovation** | First pitch coach that answers back in *your own voice*. Live coaching HUD while you speak, not after |
 | **Technical execution** | Full voice loop (STT → LLM → voice-cloned TTS) + investor Q&A in a single dependency-free HTML file, working on phone and desktop |
-| **Use of sponsor tech** | Boson Higgs TTS 3 (speech + one-shot voice clone), Nebius AI Studio (all reasoning) — both core, not decorative |
+| **Use of sponsor tech** | Boson Higgs TTS 3 (speech + one-shot voice clone), Nebius Token Factory (all reasoning) — both core, not decorative |
 | **Business viability** | Clear buyer, pricing, $0.02 cost per pitch, built-in viral loop via shareable scorecards |
 | **Demo / presentation** | Works with zero setup (▶ demo button). 60-second wow: pitch → score → hear yourself improved |
 | **Completeness** | Live at the link above. Error handling, mobile layout, free tier, waitlist — shippable today |
