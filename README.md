@@ -36,7 +36,9 @@ Founders practice their pitch in the mirror. The mirror doesn't tell you your ho
 cp keys.example.js keys.js   # add your LLM + Boson keys (gitignored, never committed)
 python -m http.server 8787   # open http://localhost:8787
 ```
-Deploy: `vercel` (static, `vercel.json` included) or GitHub Pages — both zero-config. On the deployed site, keys are entered in *Model settings* (stored in the visitor's browser only). Any OpenAI-compatible LLM works: Gemini, Groq, Nebius, OpenRouter.
+**Deploy on Vercel (recommended):** `vercel` — then set env vars `LLM_KEY`, and optionally `LLM_BASE` / `LLM_MODEL` (defaults: Gemini `gemini-3.6-flash`). The LLM key stays server-side in `api/llm.js`; visitors only add a Boson key in *Model settings*. Any OpenAI-compatible LLM works (Gemini, Groq, Nebius, OpenRouter).
+
+**GitHub Pages** (static, no `/api`): visitors paste an LLM key + Boson key in *Model settings* — stored in their browser only. Note: Gemini blocks browser-origin calls, so use Groq/Nebius there.
 
 ## Try it in 60 seconds
 
