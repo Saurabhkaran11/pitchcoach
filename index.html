@@ -162,11 +162,12 @@
 <div class="toast" id="toast"></div>
 </main>
 
+<script src="keys.js" onerror="this.remove()"></script>
 <script>
 const $=id=>document.getElementById(id);
 let LS;try{LS=window.localStorage;LS.length}catch{LS={}} // opaque origins (data:/sandbox) throw on localStorage
 const DEF={base:'https://api.tokenfactory.nebius.com/v1',model:'meta-llama/Llama-3.3-70B-Instruct'};
-const cfg=k=>LS[k]||DEF[k]||'';
+const cfg=k=>LS[k]||(window.KEYS||{})[k]||DEF[k]||''; // precedence: user-entered > keys.js > defaults
 for(const k of['base','key','model','boson']){$(k).value=cfg(k);$(k).oninput=()=>LS[k]=$(k).value}
 if(cfg('base')&&cfg('key'))$('setup').remove();$('openset')?.addEventListener('click',e=>{e.preventDefault();document.querySelector('details').open=true;$('base').focus()});
 const PERSONAS=[['🚀','YC partner','a YC partner'],['🦈','Shark','a skeptical Shark Tank investor'],['😇','Angel','a friendly angel investor'],['🔪','Brutal VC','a brutal Wall Street VC']];

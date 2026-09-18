@@ -30,6 +30,14 @@ Founders practice their pitch in the mirror. The mirror doesn't tell you your ho
   - **Boson AI — Higgs TTS 3** for speech and one-shot voice cloning (`ref_audio`)
   - **Nebius Token Factory** for the investor brain (scoring, rewrite, Q&A)
 
+## Run locally / deploy
+
+```bash
+cp keys.example.js keys.js   # add your LLM + Boson keys (gitignored, never committed)
+python -m http.server 8787   # open http://localhost:8787
+```
+Deploy: `vercel` (static, `vercel.json` included) or GitHub Pages — both zero-config. On the deployed site, keys are entered in *Model settings* (stored in the visitor's browser only). Any OpenAI-compatible LLM works: Gemini, Groq, Nebius, OpenRouter.
+
 ## Try it in 60 seconds
 
 1. Open the live link in **Chrome** (mic + speech recognition).
