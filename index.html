@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PitchCoach</title>
+<style>
+  :root{--bg:#0b0b12;--fg:#f2f2f7;--mut:#8b8b9e;--acc:#7c6cff;--acc2:#ff6cab;--card:#15151f;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444}
+  *{box-sizing:border-box}
+  html{background:var(--bg)}
+  body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#1d1a3a,transparent);color:var(--fg);font:16px/1.5 system-ui,sans-serif;min-height:100vh;padding:16px}
+  .card:not(.show){display:none}
+  main{max-width:720px;margin:0 auto}
+  h1{margin:0;font-size:32px;background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;color:transparent}
+  small{color:var(--mut)}
+
+  /* stepper */
+  .chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+  .chip{padding:6px 12px;border-radius:999px;border:1px solid #2a2a3a;background:var(--card);cursor:pointer;font-size:14px;transition:.15s}
+  .chip:hover{transform:translateY(-1px)}.chip.on{border-color:var(--acc);background:#7c6cff33}
+  .ring{position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(var(--acc2) calc(var(--p,0)*1%),transparent 0);-webkit-mask:radial-gradient(circle,transparent 66%,#000 67%);mask:radial-gradient(circle,transparent 66%,#000 67%);opacity:0;transition:opacity .3s}
+  .orb.rec .ring{opacity:1}
+  .bar{cursor:pointer;border-radius:8px;padding:2px 4px}.bar:hover{background:#ffffff0a}
+  .tip{grid-column:1/-1;font-size:14px;color:var(--mut);padding:2px 0 6px;text-transform:none}
+  .spark{display:flex;gap:3px;align-items:flex-end;height:28px;justify-content:center;margin-top:6px}
+  .spark i{width:8px;border-radius:2px;background:#2a2a3a;transition:height .5s}.spark i.cur{background:var(--acc2)}
+  .steps{display:flex;gap:8px;margin:20px 0}
+  .steps span{flex:1;height:4px;border-radius:4px;background:#2a2a3a;transition:background .4s}
+  .steps span.on{background:linear-gradient(90deg,var(--acc),var(--acc2))}
+
+  /* mic orb */
+  .orb{width:140px;height:140px;border-radius:50%;margin:24px auto;display:grid;place-items:center;font-size:48px;cursor:pointer;
+       background:var(--card);border:2px solid #2a2a3a;transition:transform .2s,box-shadow .2s;user-select:none}
+  .orb:hover{transform:scale(1.05)}
+  .orb.rec{border-color:var(--acc2);box-shadow:0 0 0 calc(var(--lvl,0)*60px) rgba(255,108,171,.15),0 0 40px rgba(124,108,255,.5)}
+  .hint{text-align:center;color:var(--mut);min-height:24px}
+  canvas{display:block;width:100%;height:60px;margin-top:8px}
+
+  .card{background:var(--card);border:1px solid #23232f;border-radius:16px;padding:16px;margin-top:14px;opacity:0;transform:translateY(12px);transition:.4s}
+  .card.show{opacity:1;transform:none}
+  #transcript{min-height:48px;white-space:pre-wrap;color:#cfcfe0}
+  #transcript .i{color:var(--mut)}
+
+  /* score bars */
+  .bar{display:grid;grid-template-columns:80px 1fr 32px;gap:10px;align-items:center;margin:8px 0;text-transform:capitalize}
+  .bar i{height:10px;border-radius:10px;background:#2a2a3a;overflow:hidden;display:block}
+  .bar i b{display:block;height:100%;width:0;border-radius:10px;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+  .bar em{font-style:normal;font-weight:700;text-align:right}
+  .total{font-size:56px;font-weight:800;text-align:center;line-height:1}
+  .total small{display:block;font-size:14px}
+
+  .rw{position:relative;padding-right:56px}
+  .rw button{position:absolute;right:0;top:0}
+  button{font:inherit;padding:10px 16px;border:0;border-radius:10px;background:var(--acc);color:#fff;cursor:pointer;transition:transform .1s}
+  button:active{transform:scale(.96)}button[disabled]{opacity:.5}
+  .ghost{background:#2a2a3a}
+  #out button{margin:4px 4px 0 0}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid #fff4;border-top-color:#fff;border-radius:50%;animation:s .8s linear infinite;vertical-align:middle}
+  @keyframes s{to{transform:rotate(360deg)}}
+  select{font:inherit;background:#0f0f18;color:var(--fg);border:1px solid #2a2a3a;border-radius:8px;padding:6px 10px}
+  details{margin-top:20px;color:var(--mut)}input{width:100%;padding:8px;margin:4px 0;font:inherit;background:#0f0f18;color:var(--fg);border:1px solid #2a2a3a;border-radius:8px}
+  .hint b{color:var(--fg)}
+  .cf{position:fixed;top:-10px;width:8px;height:14px;pointer-events:none;animation:fall 2.2s ease-in forwards}
+  @keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+  .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--bad);padding:10px 16px;border-radius:10px;display:none}
+</style>
+</head>
+<body><main>
+<h1>PitchCoach</h1>
+<small>Tap the orb. Pitch. Get roasted. Hear it fixed.</small>
+<div class="chips" id="chips"></div>
+<div hidden><select id="persona"><option value="a YC partner">YC partner</option><option value="a skeptical Shark Tank investor">Shark Tank shark</option><option value="a friendly angel investor">Friendly angel</option><option value="a brutal Wall Street VC">Brutal VC</option></select></div>
+<div class="steps"><span class="on"></span><span></span><span></span></div>
+
+<div class="card show" id="setup" style="border-color:var(--acc)">⚡ No API keys yet — hit <b>▶ Try a demo pitch</b>, or open <a href="#" id="openset" style="color:var(--acc2)">Model settings</a> and paste your Nebius + Boson keys.</div>
+<div class="orb" id="orb" style="position:relative"><span class="ring"></span>🎤</div>
+<div class="hint" id="hint">Tap to start</div>
+<div class="hint"><button class="ghost" id="demo" style="padding:6px 12px;font-size:14px">▶ Try a demo pitch</button></div>
+<canvas id="wave"></canvas>
+
+<div class="card" id="tcard"><div id="transcript"></div></div>
+
+<div class="card" id="out">
+  <div class="total" id="total">–<small>overall</small></div>
+  <div class="hint" id="stats"></div>
+  <div class="hint" id="delta"></div>
+  <div class="spark" id="spark"></div>
+  <div id="bars"></div>
+  <p id="feedback"></p>
+  <h3>Rewritten pitch</h3>
+  <div class="rw"><p id="rewrite"></p><button id="say" title="Read it back">🔊</button></div>
+  <button class="ghost" id="again">Try again</button> <button id="qa">🎯 Face investor Q&amp;A</button> <button class="ghost" id="share">📋 Copy</button> <button class="ghost" id="png">🖼 Save card</button>
+</div>
+
+<div class="card" id="qcard">
+  <h3>Investor question</h3>
+  <p id="question"></p>
+  <div class="hint" id="qhint">Tap the orb and answer out loud</div>
+  <p id="answer"></p>
+  <p id="verdict"></p>
+</div>
+
+<details>
+  <summary>Model settings</summary>
+  <input id="base" placeholder="Base URL e.g. https://api.studio.nebius.com/v1">
+  <input id="key" placeholder="API key" type="password">
+  <input id="model" placeholder="Model e.g. meta-llama/Llama-3.3-70B-Instruct">
+  <input id="boson" placeholder="Boson AI key (Higgs TTS 3) — optional" type="password">
+</details>
+<div class="toast" id="toast"></div>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+let LS;try{LS=window.localStorage;LS.length}catch{LS={}} // opaque origins (data:/sandbox) throw on localStorage
+const cfg=k=>LS[k]||'';
+for(const k of['base','key','model','boson']){$(k).value=cfg(k);$(k).oninput=()=>LS[k]=$(k).value}
+if(cfg('base')&&cfg('key'))$('setup').remove();$('openset')?.addEventListener('click',e=>{e.preventDefault();document.querySelector('details').open=true;$('base').focus()});
+const PERSONAS=[['🚀','YC partner','a YC partner'],['🦈','Shark','a skeptical Shark Tank investor'],['😇','Angel','a friendly angel investor'],['🔪','Brutal VC','a brutal Wall Street VC']];
+$('chips').innerHTML=PERSONAS.map(([e,n,v],i)=>`<span class="chip${i?'':' on'}" data-v="${v}">${e} ${n}</span>`).join('');
+$('chips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c));$('persona').value=c.dataset.v;navigator.vibrate?.(10)};
+const WHY={hook:'First 5 seconds. Did you make them lean in?',clarity:'Could a stranger repeat your idea in one sentence?',problem:'Who hurts, how badly, how often?',solution:'Why this, why now, why you?',ask:'Exact amount, exact use, exact next step.'};
+const step=n=>document.querySelectorAll('.steps span').forEach((s,i)=>s.classList.toggle('on',i<=n));
+const toast=m=>{$('toast').textContent=m;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',4000)};
+
+/* --- mic level + waveform --- */
+let ctx,an,stream,raf,mr,chunks=[],refAudio;const cv=$('wave'),g=cv.getContext('2d');
+async function startWave(){
+  stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  mr=new MediaRecorder(stream);chunks=[];mr.ondataavailable=e=>chunks.push(e.data);mr.onstop=()=>{refAudio=new Blob(chunks,{type:mr.mimeType})};mr.start();
+  ctx=new AudioContext();an=ctx.createAnalyser();an.fftSize=256;ctx.createMediaStreamSource(stream).connect(an);
+  const d=new Uint8Array(an.frequencyBinCount);cv.width=cv.clientWidth*2;cv.height=120;
+  (function draw(){raf=requestAnimationFrame(draw);an.getByteFrequencyData(d);
+    const lvl=d.reduce((a,b)=>a+b,0)/d.length/255;$('orb').style.setProperty('--lvl',lvl.toFixed(2));$('orb').style.setProperty('--p',Math.min(100,(Date.now()-t0)/600));
+    g.clearRect(0,0,cv.width,cv.height);const w=cv.width/d.length;
+    d.forEach((v,i)=>{g.fillStyle=`hsl(${250+i},80%,65%)`;const h=v/255*cv.height;g.fillRect(i*w,cv.height-h,w-2,h)})})();
+}
+function stopWave(){mr?.state==='recording'&&mr.stop();cancelAnimationFrame(raf);stream?.getTracks().forEach(t=>t.stop());ctx?.close();g.clearRect(0,0,cv.width,cv.height);$('orb').style.setProperty('--lvl',0)}
+
+/* --- speech to text --- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!SR)$('hint').textContent='Use Chrome/Edge (SpeechRecognition unavailable)';
+const rec=SR&&new SR();let text='',on=false,t0=0;
+if(rec){rec.continuous=true;rec.interimResults=true;
+  rec.onresult=e=>{let fin='',int='';for(const r of e.results)(r.isFinal?fin+=r[0].transcript+' ':int+=r[0].transcript);
+    text=fin+int;$('transcript').innerHTML=fin+'<span class="i">'+int+'</span>';
+    const w=text.trim().split(/\s+/).length,sec=(Date.now()-t0)/1000,wpm=Math.round(w/Math.max(sec,1)*60),fl=(text.match(/\b(um+|uh+|like|basically|you know|stuff|kinda|sort of)\b/gi)||[]).length;
+    $('hint').innerHTML=`<b>${Math.round(sec)}s</b> · <b style="color:${wpm>170?'var(--bad)':'var(--fg)'}">${wpm} wpm</b> · <b style="color:${fl?'var(--warn)':'var(--fg)'}">${fl} fillers</b>${sec>45?' · <span style="color:var(--bad)">wrap it up</span>':''}`};
+  rec.onend=()=>{if(on)rec.start()}}
+
+$('orb').onclick=async()=>{
+  if(!rec)return;
+  if(!on){on=true;text='';t0=Date.now();$('transcript').textContent='';if(mode==='pitch'){$('out').classList.remove('show');$('qcard').classList.remove('show')}$('tcard').classList.add('show');
+    $('orb').classList.add('rec');$('orb').textContent='⏹';$('hint').textContent='Listening… tap when done';step(0);
+    await startWave();rec.start();}
+  else{on=false;rec.stop();stopWave();$('orb').classList.remove('rec');$('orb').textContent='🎤';$('hint').textContent='Tap to start';
+    if(text.trim().split(/\s+/).length<5)return toast('Say a bit more than that.');mode==='answer'?gradeAnswer(text):score(text)}
+};
+$('again').onclick=()=>$('orb').click();
+
+/* --- LLM helper --- */
+async function llm(system,user){
+  if(!cfg("base")||!cfg("key"))throw new Error('set model settings below');
+  const r=await fetch(cfg("base").replace(/\/$/,'')+'/chat/completions',{method:'POST',
+    headers:{'content-type':'application/json',authorization:'Bearer '+cfg("key")},
+    body:JSON.stringify({model:cfg("model"),temperature:.4,messages:[{role:'system',content:system},{role:'user',content:user}]})});
+  if(!r.ok)throw new Error(r.status+' '+await r.text());
+  const raw=(await r.json()).choices[0].message.content;
+  return JSON.parse(raw.slice(raw.indexOf('{'),raw.lastIndexOf('}')+1));
+}
+
+/* --- investor Q&A round --- */
+let mode='pitch',pitchText='',question='';
+$('qa').onclick=async()=>{
+  $('qcard').classList.add('show');$('question').innerHTML='<span class="spin"></span>';$('answer').textContent='';$('verdict').textContent='';
+  try{
+    const j=await llm(`You are ${$('persona').value} who just heard this pitch. Ask the single hardest question an investor would ask. Reply ONLY JSON {"question":"..."}`,pitchText);
+    question=j.question;$('question').textContent=question;mode='answer';$('qhint').textContent='Tap the orb and answer out loud';
+    speak(question);
+  }catch(e){toast('Error: '+e.message)}
+};
+async function gradeAnswer(ans){
+  $('answer').textContent='“'+ans+'”';$('verdict').innerHTML='<span class="spin"></span>';mode='pitch';
+  try{
+    const j=await llm(`You are ${$('persona').value}. You asked a founder: "${question}". Grade their spoken answer 1-10 and say in one sentence what a great answer would have included. Reply ONLY JSON {"score":n,"verdict":"..."}`,ans);
+    $('verdict').innerHTML=`<b style="color:${j.score>=8?'var(--ok)':j.score>=5?'var(--warn)':'var(--bad)'}">${j.score}/10</b> — ${j.verdict}`;
+  }catch(e){toast('Error: '+e.message)}
+}
+
+/* --- scoring --- */
+const PROMPT=()=>`You are ${$('persona').value}. Score this spoken startup pitch 1-10 on: hook, clarity, problem, solution, ask. Then give 2 sentences of blunt feedback and rewrite the pitch as a 30-second spoken version. Reply ONLY with JSON: {"scores":{"hook":n,"clarity":n,"problem":n,"solution":n,"ask":n},"feedback":"...","rewrite":"..."}`;
+async function score(pitch){
+  step(1);$('hint').innerHTML='<span class="spin"></span> Scoring…';$('out').classList.add('show');
+  $('bars').innerHTML='';$('feedback').textContent='';$('rewrite').textContent='';$('total').firstChild.textContent='–';
+  try{
+    render(await llm(PROMPT(),pitch));
+  }catch(e){toast('Error: '+e.message);$('hint').textContent='Tap to start'}
+}
+let last;
+function render(j){
+  last=j;pitchText=text;step(2);
+  const secs=Math.max(1,(Date.now()-t0)/1000),words=text.trim().split(/\s+/).length;
+  const fillers=(text.match(/\b(um+|uh+|like|basically|you know|stuff|kinda|sort of)\b/gi)||[]).length;
+  $('stats').textContent=t0?`${Math.round(secs)}s · ${words} words · ${Math.round(words/secs*60)} wpm${words/secs*60>170?' (slow down)':''} · ${fillers} filler words`:'';$('hint').textContent='Tap to start';$('out').classList.add('show');
+  const col=v=>v>=8?'var(--ok)':v>=5?'var(--warn)':'var(--bad)';
+  const vals0=Object.values(j.scores),avg0=vals0.reduce((a,b)=>a+b,0)/vals0.length;
+  let hist=[];try{hist=JSON.parse(LS.hist||'[]')}catch{}
+  const prev=hist.at(-1);$('delta').innerHTML=prev?`<b style="color:${avg0>=prev?'var(--ok)':'var(--bad)'}">${avg0>=prev?'▲':'▼'} ${Math.abs(avg0-prev).toFixed(1)}</b> vs last attempt · attempt #${hist.length+1}`:'first attempt — pitch again to track progress';
+  hist.push(+avg0.toFixed(1));LS.hist=JSON.stringify(hist.slice(-20));
+  if(avg0>=8)confetti();
+  $('bars').innerHTML=Object.entries(j.scores).map(([k,v])=>`<div class="bar" data-k="${k}">${k}<i><b data-w="${v*10}" style="background:${col(v)}"></b></i><em>${v}</em></div>`).join('');
+  $('bars').onclick=e=>{const b=e.target.closest('.bar');if(!b)return;const t=b.querySelector('.tip');if(t)return t.remove();document.querySelectorAll('.tip').forEach(x=>x.remove());b.insertAdjacentHTML('beforeend',`<div class="tip">💡 ${WHY[b.dataset.k]||''}</div>`)};
+  $('spark').innerHTML=hist.slice(-12).map((h,i,a)=>`<i style="height:${h*10}%" class="${i===a.length-1?'cur':''}" title="${h}"></i>`).join('');
+  navigator.vibrate?.([30,50,30]);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelectorAll('.bar b').forEach(b=>b.style.width=b.dataset.w+'%')));
+  const vals=Object.values(j.scores),avg=vals.reduce((a,b)=>a+b,0)/vals.length;
+  let n=0;const t=setInterval(()=>{n=Math.min(n+.2,avg);$('total').firstChild.textContent=n.toFixed(1);$('total').style.color=col(n);if(n>=avg)clearInterval(t)},30);
+  $('feedback').textContent=j.feedback;
+  let i=0;const tw=setInterval(()=>{$('rewrite').textContent=j.rewrite.slice(0,++i);if(i>=j.rewrite.length)clearInterval(tw)},18);
+}
+
+$('share').onclick=()=>{if(!last)return;const sc=Object.entries(last.scores).map(([k,v])=>`${k} ${v}`).join(' · ');
+  navigator.clipboard.writeText(`🎤 PitchCoach
+${$('total').firstChild.textContent}/10 — ${sc}
+${last.feedback}
+
+"${last.rewrite}"`);toast('Copied!')};
+$('demo').onclick=()=>{t0=Date.now()-42000;text='so um we are building like an app for dogs where you can basically find other dogs nearby and uh set up playdates and stuff we think its a big market';
+  $('tcard').classList.add('show');$('transcript').textContent=text;
+  render({scores:{hook:3,clarity:5,problem:4,solution:6,ask:1},feedback:"You never said who pays or why now, and 'stuff' isn't a feature. Cut the filler and lead with the number.",
+  rewrite:"90 million US dog owners walk alone. Pawty matches nearby dogs by size and energy so playdates happen in one tap. We're at 2,000 weekly playdates in Austin with zero paid marketing. We're raising $500K to open three cities by spring."})};
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&e.target.tagName!=='INPUT'){e.preventDefault();$('orb').click()}});
+$('hint').title='Space bar also toggles the mic';
+
+function confetti(){for(let i=0;i<80;i++){const d=document.createElement('i');d.className='cf';d.style.cssText=`left:${Math.random()*100}vw;background:hsl(${Math.random()*360},90%,60%);animation-delay:${Math.random()*.8}s`;document.body.appendChild(d);setTimeout(()=>d.remove(),3000)}}
+
+$('png').onclick=()=>{if(!last)return;const c=document.createElement('canvas');c.width=1080;c.height=1080;const x=c.getContext('2d');
+  x.fillStyle='#0b0b12';x.fillRect(0,0,1080,1080);const gr=x.createLinearGradient(0,0,1080,0);gr.addColorStop(0,'#7c6cff');gr.addColorStop(1,'#ff6cab');
+  x.fillStyle=gr;x.font='bold 64px system-ui';x.fillText('PitchCoach',80,140);
+  x.fillStyle=$('total').style.color||'#fff';x.font='bold 220px system-ui';x.fillText($('total').firstChild.textContent,80,420);
+  x.fillStyle='#8b8b9e';x.font='36px system-ui';x.fillText('/10 overall · '+$('stats').textContent,80,480);
+  Object.entries(last.scores).forEach(([k,v],i)=>{const y=580+i*70;x.fillStyle='#f2f2f7';x.font='36px system-ui';x.fillText(k[0].toUpperCase()+k.slice(1),80,y+30);
+    x.fillStyle='#2a2a3a';x.fillRect(320,y,600,24);x.fillStyle=v>=8?'#22c55e':v>=5?'#f59e0b':'#ef4444';x.fillRect(320,y,60*v,24);x.fillStyle='#f2f2f7';x.fillText(v,950,y+30)});
+  x.fillStyle='#8b8b9e';x.font='28px system-ui';x.fillText('Scored by '+$('persona').selectedOptions[0].text+' · Boson AI × Nebius',80,1000);
+  const a=document.createElement('a');a.download='pitchcoach.png';a.href=c.toDataURL();a.click()};
+
+/* --- Boson AI Higgs TTS 3: clones the founder's own voice from the pitch recording; falls back to browser TTS --- */
+const b64=blob=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result.split(',')[1]);f.readAsDataURL(blob)});
+async function speak(t,clone=false){
+  if(!t)return;
+  if(cfg("boson")){
+    try{
+      const body={input:t,model:'higgs-tts-3',voice:'default',response_format:'mp3'};
+      if(clone&&refAudio){body.ref_audio=await b64(refAudio);body.ref_text=pitchText}
+      const r=await fetch('https://api.boson.ai/v1/audio/speech',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+cfg("boson")},body:JSON.stringify(body)});
+      if(!r.ok)throw new Error(r.status);
+      new Audio(URL.createObjectURL(await r.blob())).play();return;
+    }catch(e){toast('Boson TTS failed, using browser voice')}
+  }
+  speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t));
+}
+$('say').onclick=async()=>{$('say').disabled=true;await speak($('rewrite').textContent,true);$('say').disabled=false};
+$('say').title='Hear it in YOUR voice (Boson voice clone)';
+</script>
+</main></body>
+</html>
