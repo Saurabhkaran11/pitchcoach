@@ -180,6 +180,9 @@ function useOne(){used++;LS.used=JSON.stringify({[today]:used});left();return us
 $('wl').onsubmit=e=>{e.preventDefault();const l=JSON.parse(LS.wl||'[]');l.push($('em').value);LS.wl=JSON.stringify(l);$('wlmsg').textContent='✅ You’re #'+(1200+l.length)+' on the list.';$('em').value='';navigator.vibrate?.(20)}; // ponytail: waitlist in localStorage; swap for Insforge/Supabase table when real
 const setSkin=k=>{document.documentElement.dataset.skin=k;LS.skin=k;document.querySelectorAll('#skins button').forEach(b=>b.classList.toggle('on',b.dataset.s===k));document.querySelector('meta[name=theme-color]').content=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()};
 setSkin(cfg('skin')||'aurora');$('skins').onclick=e=>e.target.dataset.s&&setSkin(e.target.dataset.s);
+// URL params for judges/demos: ?skin=glass&demo=1 (auto-runs the demo pitch) &qa=1 (also opens Q&A)
+const Q=new URLSearchParams(location.search);if(Q.get('skin'))LS.skin=Q.get('skin');
+addEventListener('load',()=>{if(Q.get('skin'))setSkin(Q.get('skin'));if(Q.get('demo')){$('demo').click();if(Q.get('qa'))setTimeout(()=>$('qa').click(),1500)}});
 const step=n=>document.querySelectorAll('.steps span').forEach((s,i)=>s.classList.toggle('on',i<=n));
 const toast=m=>{$('toast').textContent=m;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',4000)};
 
