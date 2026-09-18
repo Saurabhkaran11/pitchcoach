@@ -47,6 +47,29 @@ Founders practice their pitch in the mirror. The mirror doesn't tell you your ho
 
 Everything is in `index.html`. ~250 lines. No dependencies.
 
+## The business
+
+| | |
+|---|---|
+| **Who pays** | Founders raising a round (~500K new startups/yr in the US alone), accelerator cohorts, university pitch competitions, sales teams practicing demos |
+| **Pricing** | Free: 3 pitches/day. **Pro $12/mo:** unlimited, voice clone, investor Q&A, team mode. **Accelerator $99/mo:** cohort dashboard |
+| **Go-to-market** | Every scorecard is a shareable PNG → founders post their score on X/LinkedIn → free viral loop. Partner with accelerators for Demo Day prep |
+| **Cost to serve** | ~$0.02 per pitch (Nebius 70B + Boson TTS). 98% gross margin at Pro pricing |
+| **Moat** | Attempt history + your cloned voice = switching cost. Every pitch scored makes the coach better |
+
+Already in the app: free-tier limit, Pro waitlist, privacy note, sponsor defaults prefilled.
+
+## Judging criteria — how we map
+
+| Criterion | PitchCoach |
+|---|---|
+| **Innovation** | First pitch coach that answers back in *your own voice*. Live coaching HUD while you speak, not after |
+| **Technical execution** | Full voice loop (STT → LLM → voice-cloned TTS) + investor Q&A in a single dependency-free HTML file, working on phone and desktop |
+| **Use of sponsor tech** | Boson Higgs TTS 3 (speech + one-shot voice clone), Nebius AI Studio (all reasoning) — both core, not decorative |
+| **Business viability** | Clear buyer, pricing, $0.02 cost per pitch, built-in viral loop via shareable scorecards |
+| **Demo / presentation** | Works with zero setup (▶ demo button). 60-second wow: pitch → score → hear yourself improved |
+| **Completeness** | Live at the link above. Error handling, mobile layout, free tier, waitlist — shippable today |
+
 ## What's next
 
 - Multi-round Q&A that gets harder as you improve

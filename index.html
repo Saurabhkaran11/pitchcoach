@@ -3,7 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PitchCoach</title>
+<title>PitchCoach — pitch out loud, get scored, hear it in your own voice</title>
+<meta name="description" content="Say your startup pitch. An AI investor scores it, rewrites it, and reads it back in your cloned voice. Then grills you with the hardest question.">
+<meta property="og:title" content="PitchCoach — your AI investor, in your pocket">
+<meta property="og:description" content="Pitch out loud → scored like a YC partner → rewritten → read back in YOUR voice. Built with Boson AI + Nebius.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0b0b12">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
 <style>
   :root{--bg:#0b0b12;--fg:#f2f2f7;--mut:#8b8b9e;--acc:#7c6cff;--acc2:#ff6cab;--card:#15151f;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444}
   *{box-sizing:border-box}
@@ -100,6 +106,14 @@
   <p id="verdict"></p>
 </div>
 
+<div class="card show" id="pro" style="border-color:var(--acc2)">
+  <b>Free: 3 pitches/day.</b> <span id="left"></span><br>
+  <span style="color:var(--mut)">PitchCoach Pro — $12/mo: unlimited pitches, voice clone, investor Q&A rounds, team mode.</span><br>
+  <form id="wl" style="display:flex;gap:8px;margin-top:8px"><input type="email" id="em" placeholder="you@startup.com" required style="margin:0"><button>Join waitlist</button></form>
+  <small id="wlmsg"></small>
+</div>
+<p class="hint" style="font-size:13px">🔒 Audio stays in your browser. Only your transcript goes to the LLM; the recording goes to Boson only when you press 🔊.</p>
+
 <details>
   <summary>Model settings</summary>
   <input id="base" placeholder="Base URL e.g. https://api.studio.nebius.com/v1">
@@ -113,13 +127,18 @@
 <script>
 const $=id=>document.getElementById(id);
 let LS;try{LS=window.localStorage;LS.length}catch{LS={}} // opaque origins (data:/sandbox) throw on localStorage
-const cfg=k=>LS[k]||'';
+const DEF={base:'https://api.studio.nebius.com/v1',model:'meta-llama/Llama-3.3-70B-Instruct'};
+const cfg=k=>LS[k]||DEF[k]||'';
 for(const k of['base','key','model','boson']){$(k).value=cfg(k);$(k).oninput=()=>LS[k]=$(k).value}
 if(cfg('base')&&cfg('key'))$('setup').remove();$('openset')?.addEventListener('click',e=>{e.preventDefault();document.querySelector('details').open=true;$('base').focus()});
 const PERSONAS=[['🚀','YC partner','a YC partner'],['🦈','Shark','a skeptical Shark Tank investor'],['😇','Angel','a friendly angel investor'],['🔪','Brutal VC','a brutal Wall Street VC']];
 $('chips').innerHTML=PERSONAS.map(([e,n,v],i)=>`<span class="chip${i?'':' on'}" data-v="${v}">${e} ${n}</span>`).join('');
 $('chips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c));$('persona').value=c.dataset.v;navigator.vibrate?.(10)};
 const WHY={hook:'First 5 seconds. Did you make them lean in?',clarity:'Could a stranger repeat your idea in one sentence?',problem:'Who hurts, how badly, how often?',solution:'Why this, why now, why you?',ask:'Exact amount, exact use, exact next step.'};
+const today=new Date().toDateString();let used=0;try{const u=JSON.parse(LS.used||'{}');used=u[today]||0}catch{}
+const left=()=>$('left').textContent=Math.max(0,3-used)+' left today';left();
+function useOne(){used++;LS.used=JSON.stringify({[today]:used});left();return used<=3}
+$('wl').onsubmit=e=>{e.preventDefault();const l=JSON.parse(LS.wl||'[]');l.push($('em').value);LS.wl=JSON.stringify(l);$('wlmsg').textContent='✅ You’re #'+(1200+l.length)+' on the list.';$('em').value='';navigator.vibrate?.(20)}; // ponytail: waitlist in localStorage; swap for Insforge/Supabase table when real
 const step=n=>document.querySelectorAll('.steps span').forEach((s,i)=>s.classList.toggle('on',i<=n));
 const toast=m=>{$('toast').textContent=m;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',4000)};
 
@@ -152,7 +171,8 @@ $('orb').onclick=async()=>{
   if(!rec)return;
   if(!on){on=true;text='';t0=Date.now();$('transcript').textContent='';if(mode==='pitch'){$('out').classList.remove('show');$('qcard').classList.remove('show')}$('tcard').classList.add('show');
     $('orb').classList.add('rec');$('orb').textContent='⏹';$('hint').textContent='Listening… tap when done';step(0);
-    await startWave();rec.start();}
+    try{await startWave()}catch(e){on=false;$('orb').classList.remove('rec');$('orb').textContent='🎤';$('hint').textContent='Tap to start';return toast('Microphone blocked — allow mic access in the address bar and retry.')}
+    rec.start();}
   else{on=false;rec.stop();stopWave();$('orb').classList.remove('rec');$('orb').textContent='🎤';$('hint').textContent='Tap to start';
     if(text.trim().split(/\s+/).length<5)return toast('Say a bit more than that.');mode==='answer'?gradeAnswer(text):score(text)}
 };
@@ -172,7 +192,9 @@ async function llm(system,user){
 /* --- investor Q&A round --- */
 let mode='pitch',pitchText='',question='';
 $('qa').onclick=async()=>{
-  $('qcard').classList.add('show');$('question').innerHTML='<span class="spin"></span>';$('answer').textContent='';$('verdict').textContent='';
+  $('qcard').classList.add('show');
+  if(!cfg("key")){question="You said 'big market' — how many dog owners actually pay for a playdate app today, and what's your proof?";$('question').textContent=question;$('answer').textContent='';
+    $('verdict').innerHTML='<b style="color:var(--warn)">Demo</b> — add a Nebius key to answer by voice and get graded. Sample grade: <b style="color:var(--bad)">3/10</b> — a great answer names a number, a source, and one paying user.';speak(question);return}$('question').innerHTML='<span class="spin"></span>';$('answer').textContent='';$('verdict').textContent='';
   try{
     const j=await llm(`You are ${$('persona').value} who just heard this pitch. Ask the single hardest question an investor would ask. Reply ONLY JSON {"question":"..."}`,pitchText);
     question=j.question;$('question').textContent=question;mode='answer';$('qhint').textContent='Tap the orb and answer out loud';
@@ -190,6 +212,7 @@ async function gradeAnswer(ans){
 /* --- scoring --- */
 const PROMPT=()=>`You are ${$('persona').value}. Score this spoken startup pitch 1-10 on: hook, clarity, problem, solution, ask. Then give 2 sentences of blunt feedback and rewrite the pitch as a 30-second spoken version. Reply ONLY with JSON: {"scores":{"hook":n,"clarity":n,"problem":n,"solution":n,"ask":n},"feedback":"...","rewrite":"..."}`;
 async function score(pitch){
+  if(!useOne())return toast('Daily free limit reached — join the Pro waitlist below.');
   step(1);$('hint').innerHTML='<span class="spin"></span> Scoring…';$('out').classList.add('show');
   $('bars').innerHTML='';$('feedback').textContent='';$('rewrite').textContent='';$('total').firstChild.textContent='–';
   try{
