@@ -17,6 +17,7 @@ Founders practice their pitch in the mirror. The mirror doesn't tell you your ho
 ## What PitchCoach does
 
 1. **You talk.** Tap the orb and pitch. A live coach shows your time, words-per-minute and filler-word count *while you speak*, with a "wrap it up" nudge at 45 seconds.
+   *Can't or don't want to speak?* Open **⌨️ Prefer to type your pitch?** and write it instead — same scoring, rewrite, and Q&A, and the rewrite is still read aloud.
 2. **An AI investor scores you** on the five things that matter: **Hook · Clarity · Problem · Solution · Ask.** Pick who judges you — YC partner, Shark Tank shark, friendly angel, or brutal VC.
 3. **It rewrites your pitch** into a tight 30-second version.
 4. **You hear it back in *your own voice*.** We clone your voice from the recording you just made, so the rewrite sounds like you — not a robot.

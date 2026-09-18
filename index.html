@@ -64,7 +64,7 @@
   .spin{display:inline-block;width:16px;height:16px;border:2px solid #fff4;border-top-color:#fff;border-radius:50%;animation:s .8s linear infinite;vertical-align:middle}
   @keyframes s{to{transform:rotate(360deg)}}
   select{font:inherit;background:#0f0f18;color:var(--fg);border:1px solid #2a2a3a;border-radius:8px;padding:6px 10px}
-  details{margin-top:20px;color:var(--mut)}input{width:100%;padding:8px;margin:4px 0;font:inherit;background:var(--field);color:var(--fg);border:1px solid var(--line2);border-radius:8px}
+  details{margin-top:20px;color:var(--mut)}input,textarea{width:100%;padding:8px;margin:4px 0;font:inherit;background:var(--field);color:var(--fg);border:1px solid var(--line2);border-radius:8px}
   .hint b{color:var(--fg)}
   .cf{position:fixed;top:-10px;width:8px;height:14px;pointer-events:none;animation:fall 2.2s ease-in forwards}
   @keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
@@ -121,6 +121,11 @@
 <div class="hint" id="hint">Tap to start</div>
 <div class="hint"><button class="ghost" id="demo" style="padding:6px 12px;font-size:14px">▶ Try a demo pitch</button></div>
 <canvas id="wave"></canvas>
+<details id="typebox" style="margin-top:8px"><summary style="text-align:center;cursor:pointer">⌨️ Prefer to type your pitch?</summary>
+  <form id="typed" class="card show"><label for="ta" style="color:var(--mut);font-size:14px">Type or paste your pitch (or your answer to the investor question)</label>
+  <textarea id="ta" rows="5" maxlength="3000" placeholder="We help… because… we're raising…"></textarea>
+  <div style="display:flex;justify-content:space-between;align-items:center"><small id="tacount">0 words</small><button>Score my pitch</button></div></form>
+</details>
 
 <div class="card" id="tcard"><div id="transcript"></div></div>
 
@@ -243,7 +248,7 @@ $('qa').onclick=async()=>{
     $('verdict').innerHTML='<b style="color:var(--warn)">Demo</b> — add a Nebius key to answer by voice and get graded. Sample grade: <b style="color:var(--bad)">3/10</b> — a great answer names a number, a source, and one paying user.';speak(question);return}$('question').innerHTML='<span class="spin"></span>';$('answer').textContent='';$('verdict').textContent='';
   try{
     const j=await llm(`You are ${$('persona').value} who just heard this pitch. Ask the single hardest question an investor would ask. Reply ONLY JSON {"question":"..."}`,pitchText);
-    question=j.question;$('question').textContent=question;mode='answer';$('qhint').textContent='Tap the orb and answer out loud';
+    question=j.question;$('question').textContent=question;mode='answer';$('qhint').textContent='Tap the orb and answer out loud — or type it above';
     speak(question);
   }catch(e){toast('Error: '+e.message)}
 };
@@ -254,6 +259,13 @@ async function gradeAnswer(ans){
     $('verdict').innerHTML=`<b style="color:${j.score>=8?'var(--ok)':j.score>=5?'var(--warn)':'var(--bad)'}">${j.score}/10</b> — ${j.verdict}`;
   }catch(e){toast('Error: '+e.message)}
 }
+
+/* --- typed pitch (accessibility: users who can't or don't want to speak) --- */
+$('ta').oninput=()=>$('tacount').textContent=($('ta').value.trim().split(/\s+/).filter(Boolean).length)+' words';
+$('typed').onsubmit=e=>{e.preventDefault();const v=$('ta').value.trim();
+  if(v.split(/\s+/).length<5)return toast('Write a bit more than that.');
+  text=v;t0=0;refAudio=null;$('tcard').classList.add('show');$('transcript').textContent=v;$('ta').value='';$('tacount').textContent='0 words';
+  mode==='answer'?gradeAnswer(v):score(v)};
 
 /* --- scoring --- */
 const PROMPT=()=>`You are ${$('persona').value}. Score this spoken startup pitch 1-10 on: hook, clarity, problem, solution, ask. Then give 2 sentences of blunt feedback and rewrite the pitch as a 30-second spoken version. Reply ONLY with JSON: {"scores":{"hook":n,"clarity":n,"problem":n,"solution":n,"ask":n},"feedback":"...","rewrite":"..."}`;
@@ -270,7 +282,7 @@ function render(j){
   last=j;pitchText=text;step(2);
   const secs=Math.max(1,(Date.now()-t0)/1000),words=text.trim().split(/\s+/).length;
   const fillers=(text.match(/\b(um+|uh+|like|basically|you know|stuff|kinda|sort of)\b/gi)||[]).length;
-  $('stats').textContent=t0?`${Math.round(secs)}s · ${words} words · ${Math.round(words/secs*60)} wpm${words/secs*60>170?' (slow down)':''} · ${fillers} filler words`:'';$('hint').textContent='Tap to start';$('out').classList.add('show');
+  $('stats').textContent=!t0?`${words} words · ${fillers} filler words · typed`:`${Math.round(secs)}s · ${words} words · ${Math.round(words/secs*60)} wpm${words/secs*60>170?' (slow down)':''} · ${fillers} filler words`;$('hint').textContent='Tap to start';$('out').classList.add('show');
   const col=v=>v>=8?'var(--ok)':v>=5?'var(--warn)':'var(--bad)';
   const vals0=Object.values(j.scores),avg0=vals0.reduce((a,b)=>a+b,0)/vals0.length;
   let hist=[];try{hist=JSON.parse(LS.hist||'[]')}catch{}
