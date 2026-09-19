@@ -86,7 +86,7 @@ Make 7-9 slides; include exactly one slide with kind "architecture". Give 5-6 qa
         log('asking the model for slides, demo script and pitch…');
         let deck;
         try { deck = await chatJson([{ role: 'system', content: system }, { role: 'user', content: user }], { signal: req.signal }); }
-        catch (e) { return fail('llm_failed', e.status === 429 ? 'The AI is busy right now. Try again in a minute.' : 'The AI could not build this deck. Press Regenerate.'); }
+        catch (e) { return fail('llm_failed', e.status === 429 ? 'The AI provider's rate limit was reached. Wait a minute, then press Regenerate.' : 'The AI could not build this deck. Press Regenerate.'); }
         if (!Array.isArray(deck?.slides) || !deck.slides.length) return fail('llm_failed', 'The AI returned an empty deck. Press Regenerate.');
 
         // 4 — building slides
