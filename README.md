@@ -6,7 +6,7 @@ Built in one hour at [OSS4AI: Build an AI Startup in One Day](https://luma.com/o
 
 > 🎬 **2-min demo video:** [demo.mp4](demo.mp4) · **Instant scored demo:** https://saurabhkaran11.github.io/pitchcoach/?demo=1&qa=1&skin=glass
 >
-> 👉 **Live demo:** https://saurabhkaran11.github.io/pitchcoach/ — no signup. Hit **▶ Try a demo pitch** to see it work in 5 seconds.
+> 👉 **Live app:** https://pitchcoach-five.vercel.app/ — no signup. Hit **▶ Try a demo pitch** to see it work in 5 seconds.
 
 ---
 
@@ -23,6 +23,7 @@ Founders practice their pitch in the mirror. The mirror doesn't tell you your ho
 4. **You hear it back in *your own voice*.** We clone your voice from the recording you just made, so the rewrite sounds like you — not a robot.
 5. **Face the hardest question.** The investor asks the one question that would kill your deal. You answer out loud. It grades your answer.
 6. **Pitch again.** Every attempt is tracked — see your score go up. Confetti at 8+.
+7. **See your analysis.** Best, average and change since your first try; a trend chart; a table per criterion with your weakest area flagged; an AI coaching plan with 3 drills; CSV export.
 
 ## Why this wins
 
@@ -82,6 +83,10 @@ Already in the app: free-tier limit, Pro waitlist, privacy note, sponsor default
 | **Business viability** | Clear buyer, pricing, $0.02 cost per pitch, built-in viral loop via shareable scorecards |
 | **Demo / presentation** | Works with zero setup (▶ demo button). 60-second wow: pitch → score → hear yourself improved |
 | **Completeness** | Live at the link above. Error handling, mobile layout, free tier, waitlist — shippable today |
+
+## Production readiness
+
+Keys server-side, per-IP rate limits and origin checks on every endpoint, provider retry + model fallback, voice-clone consent, privacy & terms page, analytics. Full status and what is still open: [GTM.md](GTM.md).
 
 ## What's next
 

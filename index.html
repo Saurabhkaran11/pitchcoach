@@ -105,6 +105,7 @@
   [data-skin=neo] .bar i{border:2px solid #111;height:14px}
   [data-skin=neo] .orb.rec{box-shadow:6px 6px 0 var(--acc)}
 </style>
+<script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
 <div class="skins" id="skins"><button data-s="aurora">Aurora</button><button data-s="glass">Glass</button><button data-s="clay">Clay</button><button data-s="neo">Neo</button></div>
@@ -164,6 +165,7 @@
   <input id="model" placeholder="Model e.g. meta-llama/Llama-3.3-70B-Instruct">
   <input id="boson" placeholder="Boson AI key (Higgs TTS 3) — optional" type="password">
 </details>
+<p class="hint" style="font-size:13px;margin-top:24px"><a href="privacy.html" style="color:var(--mut)">Privacy &amp; Terms</a> · AI feedback can be wrong — practice tool, not investment advice</p>
 <div class="toast" id="toast"></div>
 </main>
 
@@ -182,7 +184,7 @@ const WHY={hook:'First 5 seconds. Did you make them lean in?',clarity:'Could a s
 const today=new Date().toDateString();let used=0;try{const u=JSON.parse(LS.used||'{}');used=u[today]||0}catch{}
 const left=()=>$('left').textContent=Math.max(0,3-used)+' left today';left();
 function useOne(){used++;LS.used=JSON.stringify({[today]:used});left();return used<=3}
-$('wl').onsubmit=e=>{e.preventDefault();const l=JSON.parse(LS.wl||'[]');l.push($('em').value);LS.wl=JSON.stringify(l);$('wlmsg').textContent='✅ You’re #'+(1200+l.length)+' on the list.';$('em').value='';navigator.vibrate?.(20)}; // ponytail: waitlist in localStorage; swap for Insforge/Supabase table when real
+$('wl').onsubmit=e=>{e.preventDefault();fetch('api/waitlist',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:$('em').value})}).catch(()=>{});const l=JSON.parse(LS.wl||'[]');l.push($('em').value);LS.wl=JSON.stringify(l);$('wlmsg').textContent='✅ You’re #'+(1200+l.length)+' on the list.';$('em').value='';navigator.vibrate?.(20)}; // ponytail: waitlist in localStorage; swap for Insforge/Supabase table when real
 const setSkin=k=>{document.documentElement.dataset.skin=k;LS.skin=k;document.querySelectorAll('#skins button').forEach(b=>b.classList.toggle('on',b.dataset.s===k));document.querySelector('meta[name=theme-color]').content=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()};
 setSkin(cfg('skin')||'aurora');$('skins').onclick=e=>e.target.dataset.s&&setSkin(e.target.dataset.s);
 // URL params for judges/demos: ?skin=glass&demo=1 (auto-runs the demo pitch) &qa=1 (also opens Q&A)
@@ -228,16 +230,18 @@ $('orb').onclick=async()=>{
 $('again').onclick=()=>$('orb').click();
 
 /* --- LLM helper --- */
-async function llm(system,user){
+async function llm(system,user,retry=true){
   const messages=[{role:'system',content:system},{role:'user',content:user}];
   // ponytail: no key in browser → same-origin /api/llm (Vercel proxy holding the key). GitHub Pages has no /api, so keys go in Model settings there.
   const proxy=location.hostname.endsWith('vercel.app')||!cfg("key")||cfg("key")==='proxy'; // on Vercel always use the server proxy: a stale key saved in this browser must not hijack the call
   const r=await fetch(proxy?'api/llm':cfg("base").replace(/\/$/,'')+'/chat/completions',{method:'POST',
     headers:proxy?{'content-type':'application/json'}:{'content-type':'application/json',authorization:'Bearer '+cfg("key")},
     body:JSON.stringify(proxy?{messages,temperature:.4}:{model:cfg("model"),temperature:.4,messages})});
+  if(r.status===429)throw new Error('Too many requests. Wait a minute and try again.');
   if(!r.ok)throw new Error(r.status+' '+(await r.text()).slice(0,200));
   const raw=(await r.json()).choices[0].message.content;
-  return JSON.parse(raw.slice(raw.indexOf('{'),raw.lastIndexOf('}')+1));
+  try{return JSON.parse(raw.slice(raw.indexOf('{'),raw.lastIndexOf('}')+1))}
+  catch{if(retry)return llm(system,user,false);throw new Error('The AI gave an unreadable answer. Please try again.')}
 }
 
 /* --- investor Q&A round --- */
@@ -288,6 +292,7 @@ function render(j){
   let hist=[];try{hist=JSON.parse(LS.hist||'[]')}catch{}
   const prev=hist.at(-1);$('delta').innerHTML=prev?`<b style="color:${avg0>=prev?'var(--ok)':'var(--bad)'}">${avg0>=prev?'▲':'▼'} ${Math.abs(avg0-prev).toFixed(1)}</b> vs last attempt · attempt #${hist.length+1}`:'first attempt — pitch again to track progress';
   hist.push(+avg0.toFixed(1));LS.hist=JSON.stringify(hist.slice(-20));
+  window.recordAttempt?.({scores:j.scores,avg:+avg0.toFixed(1),words,fillers,wpm:t0?Math.round(words/secs*60):null,secs:t0?Math.round(secs):null,persona:$('persona').selectedOptions[0].text,typed:!t0,at:Date.now()});
   if(avg0>=8)confetti();
   $('bars').innerHTML=Object.entries(j.scores).map(([k,v])=>`<div class="bar" data-k="${k}">${k}<i><b data-w="${v*10}" style="background:${col(v)}"></b></i><em>${v}</em></div>`).join('');
   $('bars').onclick=e=>{const b=e.target.closest('.bar');if(!b)return;const t=b.querySelector('.tip');if(t)return t.remove();document.querySelectorAll('.tip').forEach(x=>x.remove());b.insertAdjacentHTML('beforeend',`<div class="tip">💡 ${WHY[b.dataset.k]||''}</div>`)};
@@ -334,7 +339,7 @@ async function speak(t,clone=false){
   if(cfg("boson")||onVercel){
     try{
       const body={input:t,model:'higgs-tts-3',voice:'default',response_format:'mp3'};
-      if(clone&&refAudio){body.ref_audio=await b64(refAudio);body.ref_text=pitchText}
+      if(clone&&refAudio&&(LS.cloneOk||(LS.cloneOk=confirm('Read this back in YOUR voice?\n\nYour recording will be sent to Boson AI to clone your voice for this playback. It is not stored by PitchCoach. Only clone your own voice.\n\nOK = use my voice. Cancel = standard voice')?'1':''))){body.ref_audio=await b64(refAudio);body.ref_text=pitchText}
       const direct=!onVercel&&!!cfg("boson"); // on Vercel always go through /api/tts
       const r=await fetch(direct?'https://api.boson.ai/v1/audio/speech':'api/tts',{method:'POST',headers:direct?{'content-type':'application/json',authorization:'Bearer '+cfg("boson")}:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok)throw new Error(r.status);
@@ -346,5 +351,6 @@ async function speak(t,clone=false){
 $('say').onclick=async()=>{$('say').disabled=true;await speak($('rewrite').textContent,true);$('say').disabled=false};
 $('say').title='Hear it in YOUR voice (Boson voice clone)';
 </script>
+<script src="analysis.js"></script>
 </main></body>
 </html>
