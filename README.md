@@ -46,13 +46,11 @@ Founders practice their pitch in the mirror. The mirror doesn't tell you your ho
 
 ```bash
 npm install
-printf 'LLM_KEY=...
-BOSON_KEY=...
-' > .env.local   # gitignored
+cp .env.example .env.local   # gitignored
 npm run dev                 # http://localhost:8787  (voice coach at /, decks at /deck)
 node lib/github.test.mjs    # self-check for the repo URL parser + stack detection
 ```
-**Deploy on Vercel (recommended):** `vercel` — then set env vars `LLM_KEY` and `BOSON_KEY` (optional: `LLM_BASE`, `LLM_MODEL`; defaults: Gemini `gemini-3.6-flash`). Both keys stay server-side in `api/llm.js` and `api/tts.js` — visitors enter nothing. Any OpenAI-compatible LLM works (Gemini, Groq, Nebius, OpenRouter).
+**Deploy on Vercel (recommended):** `vercel` — then set env vars `LLM_KEY` and `BOSON_KEY` (optional: `LLM_BASE`, `LLM_MODEL`; defaults: Gemini `gemini-3.6-flash`). Both keys stay server-side in `app/api/*/route.js` — visitors enter nothing. Any OpenAI-compatible LLM works (Gemini, Groq, Nebius, OpenRouter).
 
 **GitHub Pages** (static, no `/api`): visitors paste an LLM key + Boson key in *Model settings* — stored in their browser only. Note: Gemini blocks browser-origin calls, so use Groq/Nebius there.
 
