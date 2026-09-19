@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+/* shadcn-style tokens. Dark is the default; .light on <html> flips them. */
+@custom-variant light (&:where(.light, .light *));
+
+:root {
+  --background: #0a0a0f; --foreground: #f4f4f8; --card: #13131b; --muted: #1c1c27; --muted-foreground: #9a9ab0;
+  --border: #2a2a3a; --input: #2a2a3a; --primary: #7c6cff; --primary-foreground: #ffffff; --accent: #ff6cab;
+  --destructive: #ef4444; --success: #22c55e; --warning: #f59e0b; --ring: #a99dff;
+}
+.light {
+  --background: #fafafc; --foreground: #14141f; --card: #ffffff; --muted: #f0f0f6; --muted-foreground: #5d5d75;
+  --border: #e2e2ec; --input: #d6d6e2; --primary: #5b4be0; --primary-foreground: #ffffff; --accent: #d63384;
+  --destructive: #dc2626; --success: #15803d; --warning: #b45309; --ring: #5b4be0;
+}
+@theme inline {
+  --color-background: var(--background); --color-foreground: var(--foreground); --color-card: var(--card);
+  --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground); --color-border: var(--border);
+  --color-input: var(--input); --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent); --color-destructive: var(--destructive); --color-success: var(--success);
+  --color-warning: var(--warning); --color-ring: var(--ring);
+}
+
+html { background: var(--background); color-scheme: dark; }
+html.light { color-scheme: light; }
+body { background: var(--background); color: var(--foreground); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+
+/* WCAG-visible focus ring everywhere, keyboard only */
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 6px; }
+[contenteditable]:focus-visible { outline-offset: 4px; }
+
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+@keyframes slide-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes slide-in-rev { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+@media print { .no-print { display: none !important; } .print-slide { break-after: page; width: 100vw; height: 100vh; } @page { size: 1280px 720px; margin: 0; } }

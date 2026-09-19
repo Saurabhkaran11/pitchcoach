@@ -10,6 +10,14 @@ Built in one hour at [OSS4AI: Build an AI Startup in One Day](https://luma.com/o
 
 ---
 
+## New: Repo to Pitch in 30s (`/deck`)
+
+Paste a GitHub repo, pick the room (Hackathon, VC Pitch, Product Launch, College Demo) and get an editable slide deck, a demo script with a timer, a 60-second and 5-minute pitch with Q&A prep, and event tips. Present in the browser (arrow keys, F fullscreen, N notes), or export PPTX, PDF, Markdown or a share link. Facts come from the repo only; the model is told to leave `[add: …]` placeholders where a number is missing.
+
+Stack: Next.js (App Router) · Tailwind v4 · shadcn-style components · Zustand · Mermaid · pptxgenjs. Try it: https://pitchcoach-five.vercel.app/deck
+
+---
+
 ## The problem
 
 Founders practice their pitch in the mirror. The mirror doesn't tell you your hook is weak, you said "um" nine times, or that you never actually asked for money. Real feedback only comes from investors — and by then it's too late.
@@ -37,8 +45,12 @@ Founders practice their pitch in the mirror. The mirror doesn't tell you your ho
 ## Run locally / deploy
 
 ```bash
-cp keys.example.js keys.js   # add your LLM + Boson keys (gitignored, never committed)
-python -m http.server 8787   # open http://localhost:8787
+npm install
+printf 'LLM_KEY=...
+BOSON_KEY=...
+' > .env.local   # gitignored
+npm run dev                 # http://localhost:8787  (voice coach at /, decks at /deck)
+node lib/github.test.mjs    # self-check for the repo URL parser + stack detection
 ```
 **Deploy on Vercel (recommended):** `vercel` — then set env vars `LLM_KEY` and `BOSON_KEY` (optional: `LLM_BASE`, `LLM_MODEL`; defaults: Gemini `gemini-3.6-flash`). Both keys stay server-side in `api/llm.js` and `api/tts.js` — visitors enter nothing. Any OpenAI-compatible LLM works (Gemini, Groq, Nebius, OpenRouter).
 
