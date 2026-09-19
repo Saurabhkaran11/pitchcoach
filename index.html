@@ -231,7 +231,7 @@ $('again').onclick=()=>$('orb').click();
 async function llm(system,user){
   const messages=[{role:'system',content:system},{role:'user',content:user}];
   // ponytail: no key in browser → same-origin /api/llm (Vercel proxy holding the key). GitHub Pages has no /api, so keys go in Model settings there.
-  const proxy=!cfg("key")||cfg("key")==='proxy';
+  const proxy=location.hostname.endsWith('vercel.app')||!cfg("key")||cfg("key")==='proxy'; // on Vercel always use the server proxy: a stale key saved in this browser must not hijack the call
   const r=await fetch(proxy?'api/llm':cfg("base").replace(/\/$/,'')+'/chat/completions',{method:'POST',
     headers:proxy?{'content-type':'application/json'}:{'content-type':'application/json',authorization:'Bearer '+cfg("key")},
     body:JSON.stringify(proxy?{messages,temperature:.4}:{model:cfg("model"),temperature:.4,messages})});
@@ -335,7 +335,7 @@ async function speak(t,clone=false){
     try{
       const body={input:t,model:'higgs-tts-3',voice:'default',response_format:'mp3'};
       if(clone&&refAudio){body.ref_audio=await b64(refAudio);body.ref_text=pitchText}
-      const direct=!!cfg("boson");
+      const direct=!onVercel&&!!cfg("boson"); // on Vercel always go through /api/tts
       const r=await fetch(direct?'https://api.boson.ai/v1/audio/speech':'api/tts',{method:'POST',headers:direct?{'content-type':'application/json',authorization:'Bearer '+cfg("boson")}:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok)throw new Error(r.status);
       new Audio(URL.createObjectURL(await r.blob())).play();return;
