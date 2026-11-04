@@ -117,7 +117,7 @@
 <div hidden><select id="persona"><option value="a YC partner">YC partner</option><option value="a skeptical Shark Tank investor">Shark Tank shark</option><option value="a friendly angel investor">Friendly angel</option><option value="a brutal Wall Street VC">Brutal VC</option></select></div>
 <div class="steps"><span class="on"></span><span></span><span></span></div>
 
-<div class="card show" id="setup" style="border-color:var(--acc)">⚡ No API keys yet — hit <b>▶ Try a demo pitch</b>, or open <a href="#" id="openset" style="color:var(--acc2)">Model settings</a> and paste your Nebius + Boson keys.</div>
+<div class="card show" id="setup" style="border-color:var(--acc)">⚡ No API keys yet — hit <b>▶ Try a demo pitch</b>, or open <a href="#" id="openset" style="color:var(--acc2)">Model settings</a> and paste your own Gemini key (and a Boson key for the cloned voice).</div>
 <div class="orb" id="orb" style="position:relative"><span class="ring"></span>🎤</div>
 <div class="hint" id="hint">Tap to start</div>
 <div class="hint"><button class="ghost" id="demo" style="padding:6px 12px;font-size:14px">▶ Try a demo pitch</button></div>
@@ -158,25 +158,25 @@
 </div>
 <p class="hint" style="font-size:13px">🔒 Audio stays in your browser. Only your transcript goes to the LLM; the recording goes to Boson only when you press 🔊.</p>
 
-<details>
+<details id="settings">
   <summary>Model settings</summary>
-  <input id="base" placeholder="Base URL e.g. https://api.tokenfactory.nebius.com/v1">
-  <input id="key" placeholder="API key" type="password">
-  <input id="model" placeholder="Model e.g. meta-llama/Llama-3.3-70B-Instruct">
-  <input id="boson" placeholder="Boson AI key (Higgs TTS 3) — optional" type="password">
+  <input id="key" placeholder="Your Gemini API key" type="password" autocomplete="off" spellcheck="false">
+  <input id="boson" placeholder="Your Boson AI key (Higgs TTS 3) — optional" type="password" autocomplete="off" spellcheck="false">
+  <small>Billed to your own accounts. Not saved or logged, and cleared when you reload this tab. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--acc2)">Get a Gemini key</a></small>
 </details>
 <p class="hint" style="font-size:13px;margin-top:24px"><a href="privacy.html" style="color:var(--mut)">Privacy &amp; Terms</a> · AI feedback can be wrong — practice tool, not investment advice</p>
 <div class="toast" id="toast"></div>
 </main>
 
-<script src="keys.js" onerror="this.remove()"></script>
 <script>
 const $=id=>document.getElementById(id);
 let LS;try{LS=window.localStorage;LS.length}catch{LS={}} // opaque origins (data:/sandbox) throw on localStorage
-const DEF={base:'https://api.tokenfactory.nebius.com/v1',model:'meta-llama/Llama-3.3-70B-Instruct'};
-const cfg=k=>LS[k]||(window.KEYS||{})[k]||DEF[k]||''; // precedence: user-entered > keys.js > defaults
-for(const k of['base','key','model','boson']){$(k).value=cfg(k);$(k).oninput=()=>LS[k]=$(k).value}
-if(cfg('key')||location.hostname.endsWith('vercel.app'))$('setup').remove();$('openset')?.addEventListener('click',e=>{e.preventDefault();document.querySelector('details').open=true;$('base').focus()});
+const cfg=k=>LS[k]||'';
+const KEYS={key:'',boson:''}; // the visitor's own keys: memory only. Clear anything older versions saved in this browser.
+for(const k of['base','key','model','boson'])delete LS[k];
+for(const k of['key','boson'])$(k).oninput=()=>{KEYS[k]=$(k).value.trim();$('setup').hidden=!!KEYS.key};
+const openSettings=()=>{$('settings').open=true;$('key').focus()};
+$('openset').addEventListener('click',e=>{e.preventDefault();openSettings()});
 const PERSONAS=[['🚀','YC partner','a YC partner'],['🦈','Shark','a skeptical Shark Tank investor'],['😇','Angel','a friendly angel investor'],['🔪','Brutal VC','a brutal Wall Street VC']];
 $('chips').innerHTML=PERSONAS.map(([e,n,v],i)=>`<span class="chip${i?'':' on'}" data-v="${v}">${e} ${n}</span>`).join('');
 $('chips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c));$('persona').value=c.dataset.v;navigator.vibrate?.(10)};
@@ -189,7 +189,7 @@ const setSkin=k=>{document.documentElement.dataset.skin=k;LS.skin=k;document.que
 setSkin(cfg('skin')||'aurora');$('skins').onclick=e=>e.target.dataset.s&&setSkin(e.target.dataset.s);
 // URL params for judges/demos: ?skin=glass&demo=1 (auto-runs the demo pitch) &qa=1 (also opens Q&A)
 const Q=new URLSearchParams(location.search);if(Q.get('skin'))LS.skin=Q.get('skin');
-addEventListener('load',()=>{if(location.hostname.endsWith('vercel.app'))document.querySelector('details:not(#typebox)').hidden=true;if(Q.get('skin'))setSkin(Q.get('skin'));if(Q.get('demo')){$('demo').click();if(Q.get('qa'))setTimeout(()=>$('qa').click(),1500)}});
+addEventListener('load',()=>{if(Q.get('skin'))setSkin(Q.get('skin'));if(Q.get('demo')){$('demo').click();if(Q.get('qa'))setTimeout(()=>$('qa').click(),1500)}});
 const step=n=>document.querySelectorAll('.steps span').forEach((s,i)=>s.classList.toggle('on',i<=n));
 const toast=m=>{$('toast').textContent=m;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',4000)};
 
@@ -232,13 +232,10 @@ $('again').onclick=()=>$('orb').click();
 /* --- LLM helper --- */
 async function llm(system,user,retry=true){
   const messages=[{role:'system',content:system},{role:'user',content:user}];
-  // ponytail: no key in browser → same-origin /api/llm (Vercel proxy holding the key). GitHub Pages has no /api, so keys go in Model settings there.
-  const proxy=location.hostname.endsWith('vercel.app')||!cfg("key")||cfg("key")==='proxy'; // on Vercel always use the server proxy: a stale key saved in this browser must not hijack the call
-  const r=await fetch(proxy?'api/llm':cfg("base").replace(/\/$/,'')+'/chat/completions',{method:'POST',
-    headers:proxy?{'content-type':'application/json'}:{'content-type':'application/json',authorization:'Bearer '+cfg("key")},
-    body:JSON.stringify(proxy?{messages,temperature:.4}:{model:cfg("model"),temperature:.4,messages})});
-  if(r.status===429)throw new Error('Too many requests. Wait a minute and try again.');
-  if(!r.ok)throw new Error(r.status+' '+(await r.text()).slice(0,200));
+  if(!KEYS.key){openSettings();throw new Error('Add your own Gemini API key in Model settings. A demo pitch works without one.')}
+  const r=await fetch('api/llm',{method:'POST',headers:{'content-type':'application/json','x-llm-key':KEYS.key},body:JSON.stringify({messages,temperature:.4})});
+  if(r.status===404||r.status===405)throw new Error('This static copy has no server. Use the demo pitch or the full app.');
+  if(!r.ok){let m;try{m=(await r.json()).error}catch{}throw new Error(m||'The AI request failed (error '+r.status+'). Try again.')}
   const raw=(await r.json()).choices[0].message.content;
   try{return JSON.parse(raw.slice(raw.indexOf('{'),raw.lastIndexOf('}')+1))}
   catch{if(retry)return llm(system,user,false);throw new Error('The AI gave an unreadable answer. Please try again.')}
@@ -248,8 +245,8 @@ async function llm(system,user,retry=true){
 let mode='pitch',pitchText='',question='';
 $('qa').onclick=async()=>{
   $('qcard').classList.add('show');
-  if(!cfg("key")&&!location.hostname.endsWith('vercel.app')){question="You said 'big market' — how many dog owners actually pay for a playdate app today, and what's your proof?";$('question').textContent=question;$('answer').textContent='';
-    $('verdict').innerHTML='<b style="color:var(--warn)">Demo</b> — add a Nebius key to answer by voice and get graded. Sample grade: <b style="color:var(--bad)">3/10</b> — a great answer names a number, a source, and one paying user.';speak(question);return}$('question').innerHTML='<span class="spin"></span>';$('answer').textContent='';$('verdict').textContent='';
+  if(!KEYS.key){question="You said 'big market' — how many dog owners actually pay for a playdate app today, and what's your proof?";$('question').textContent=question;$('answer').textContent='';
+    $('verdict').innerHTML='<b style="color:var(--warn)">Demo</b> — add your Gemini key in Model settings to answer by voice and get graded. Sample grade: <b style="color:var(--bad)">3/10</b> — a great answer names a number, a source, and one paying user.';speak(question);return}$('question').innerHTML='<span class="spin"></span>';$('answer').textContent='';$('verdict').textContent='';
   try{
     const j=await llm(`You are ${$('persona').value} who just heard this pitch. Ask the single hardest question an investor would ask. Reply ONLY JSON {"question":"..."}`,pitchText);
     question=j.question;$('question').textContent=question;mode='answer';$('qhint').textContent='Tap the orb and answer out loud — or type it above';
@@ -274,6 +271,7 @@ $('typed').onsubmit=e=>{e.preventDefault();const v=$('ta').value.trim();
 /* --- scoring --- */
 const PROMPT=()=>`You are ${$('persona').value}. Score this spoken startup pitch 1-10 on: hook, clarity, problem, solution, ask. Then give 2 sentences of blunt feedback and rewrite the pitch as a 30-second spoken version. Reply ONLY with JSON: {"scores":{"hook":n,"clarity":n,"problem":n,"solution":n,"ask":n},"feedback":"...","rewrite":"..."}`;
 async function score(pitch){
+  if(!KEYS.key){openSettings();return toast('Add your own Gemini API key in Model settings. A demo pitch works without one.')}
   if(!useOne())return toast('Daily free limit reached — join the Pro waitlist below.');
   step(1);$('hint').innerHTML='<span class="spin"></span> Scoring…';$('out').classList.add('show');
   $('bars').innerHTML='';$('feedback').textContent='';$('rewrite').textContent='';$('total').firstChild.textContent='–';
@@ -327,24 +325,22 @@ $('png').onclick=()=>{if(!last)return;const c=document.createElement('canvas');c
   x.fillStyle='#8b8b9e';x.font='36px system-ui';x.fillText('/10 overall · '+$('stats').textContent,80,480);
   Object.entries(last.scores).forEach(([k,v],i)=>{const y=580+i*70;x.fillStyle='#f2f2f7';x.font='36px system-ui';x.fillText(k[0].toUpperCase()+k.slice(1),80,y+30);
     x.fillStyle='#2a2a3a';x.fillRect(320,y,600,24);x.fillStyle=v>=8?'#22c55e':v>=5?'#f59e0b':'#ef4444';x.fillRect(320,y,60*v,24);x.fillStyle='#f2f2f7';x.fillText(v,950,y+30)});
-  x.fillStyle='#8b8b9e';x.font='28px system-ui';x.fillText('Scored by '+$('persona').selectedOptions[0].text+' · Boson AI × Nebius',80,1000);
+  x.fillStyle='#8b8b9e';x.font='28px system-ui';x.fillText('Scored by '+$('persona').selectedOptions[0].text,80,1000);
   const a=document.createElement('a');a.download='pitchcoach.png';a.href=c.toDataURL();a.click()};
 
 /* --- Boson AI Higgs TTS 3: clones the founder's own voice from the pitch recording; falls back to browser TTS --- */
 const b64=blob=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result.split(',')[1]);f.readAsDataURL(blob)});
 async function speak(t,clone=false){
   if(!t)return;
-  // key in browser → call Boson directly; no key → same-origin /api/tts (Vercel proxy holding BOSON_KEY)
-  const onVercel=location.hostname.endsWith('vercel.app');
-  if(cfg("boson")||onVercel){
+  // the visitor's Boson key goes to our /api/tts route for this call only; no key → browser voice
+  if(KEYS.boson){
     try{
       const body={input:t,model:'higgs-tts-3',voice:'default',response_format:'mp3'};
       if(clone&&refAudio&&(LS.cloneOk||(LS.cloneOk=confirm('Read this back in YOUR voice?\n\nYour recording will be sent to Boson AI to clone your voice for this playback. It is not stored by PitchCoach. Only clone your own voice.\n\nOK = use my voice. Cancel = standard voice')?'1':''))){body.ref_audio=await b64(refAudio);body.ref_text=pitchText}
-      const direct=!onVercel&&!!cfg("boson"); // on Vercel always go through /api/tts
-      const r=await fetch(direct?'https://api.boson.ai/v1/audio/speech':'api/tts',{method:'POST',headers:direct?{'content-type':'application/json',authorization:'Bearer '+cfg("boson")}:{'content-type':'application/json'},body:JSON.stringify(body)});
-      if(!r.ok)throw new Error(r.status);
+      const r=await fetch('api/tts',{method:'POST',headers:{'content-type':'application/json','x-boson-key':KEYS.boson},body:JSON.stringify(body)});
+      if(!r.ok){let m;try{m=(await r.json()).error}catch{}throw new Error(m||'Boson TTS failed.')}
       new Audio(URL.createObjectURL(await r.blob())).play();return;
-    }catch(e){toast('Boson TTS failed, using browser voice')}
+    }catch(e){toast(e.message+' Using the browser voice.')}
   }
   speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t));
 }

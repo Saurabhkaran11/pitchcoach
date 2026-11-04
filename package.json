@@ -1,9 +1,13 @@
 {
   "name": "pitchcoach",
   "private": true,
-  "scripts": { "dev": "next dev -p 8787", "build": "next build", "start": "next start -p 8787" },
+  "scripts": {
+    "dev": "next dev -p 8787",
+    "build": "next build",
+    "start": "next start -p 8787"
+  },
   "dependencies": {
-    "next": "^15.5.0",
+    "next": "15.5.29",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zustand": "^5.0.0",
@@ -13,5 +17,9 @@
   "devDependencies": {
     "tailwindcss": "^4.1.0",
     "@tailwindcss/postcss": "^4.1.0"
+  },
+  "overrides": {
+    "postcss": "^8.5.28",
+    "image-size": "^2.0.4"
   }
 }

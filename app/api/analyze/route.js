@@ -1,8 +1,8 @@
 // Repo → deck. Streams NDJSON events so the loader can show real steps and log lines:
 //   {type:'step', step:0..3} · {type:'log', line} · {type:'stats', stats} · {type:'done', project} · {type:'error', code, message}
-// Error codes the UI knows: invalid_url, private_or_missing, rate_limited, too_large, llm_failed, unknown.
+// Error codes the UI knows: invalid_url, private_or_missing, rate_limited, too_large, no_key, bad_key, llm_failed, unknown.
 import { guard } from '@/lib/guard';
-import { chatJson } from '@/lib/llm';
+import { chatJson, headerKey, noKey } from '@/lib/llm';
 import { parseRepoUrl, detectStack, isManifest, MAX_FILES } from '@/lib/github';
 
 export const maxDuration = 60;
@@ -18,6 +18,7 @@ export async function POST(req) {
   const refused = guard(req, { limit: 6, bucket: 'an:' });
   if (refused) return refused;
   const { url, eventType = 'Hackathon', token, shallow = false } = await req.json().catch(() => ({}));
+  const key = headerKey(req, 'x-llm-key');
   const enc = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -26,6 +27,7 @@ export async function POST(req) {
       const log = line => send({ type: 'log', line });
       const fail = (code, message) => { send({ type: 'error', code, message }); ctrl.close(); };
       try {
+        if (!key) return fail('no_key', 'Decks are written by Gemini using your own API key. Add it below, then retry.');
         const id = parseRepoUrl(url);
         if (!id) return fail('invalid_url', 'That does not look like github.com/owner/repo.');
         if (!EVENT_BRIEF[eventType]) return fail('invalid_url', 'Unknown event type.');
@@ -40,6 +42,8 @@ export async function POST(req) {
         if (metaR.status === 403 || metaR.status === 429) return fail('rate_limited', 'GitHub rate limit hit. Add a GitHub token or try again in a few minutes.');
         if (!metaR.ok) return fail('unknown', 'GitHub returned ' + metaR.status);
         const meta = await metaR.json();
+        // A server GITHUB_TOKEN may reach the owner's private repos. Only a visitor's own token may read a private repo.
+        if (meta.private && !token) return fail('private_or_missing', 'Repo not found. If it is private, add a GitHub token with read access.');
         log(`${meta.full_name} · ★ ${meta.stargazers_count} · default branch ${meta.default_branch}`);
 
         let paths = [];
@@ -85,8 +89,8 @@ Make 7-9 slides; include exactly one slide with kind "architecture". Give 5-6 qa
         const user = `EVENT: ${eventType}\nREPO: ${meta.full_name}\nDESCRIPTION: ${meta.description || '(none)'}\nTOPICS: ${(meta.topics || []).join(', ')}\nSTACK: ${JSON.stringify(stack)}\n\nTOP-LEVEL LAYOUT:\n${dirs}\n\nMANIFESTS:\n${Object.entries(manifests).map(([p, t]) => `--- ${p}\n${t}`).join('\n')}\n\nREADME:\n${readme || '(no README)'}`;
         log('asking the model for slides, demo script and pitch…');
         let deck;
-        try { deck = await chatJson([{ role: 'system', content: system }, { role: 'user', content: user }], { signal: req.signal }); }
-        catch (e) { return fail('llm_failed', e.status === 429 ? 'The AI rate limit was reached. Wait a minute, then press Regenerate.' : 'The AI could not build this deck. Press Regenerate.'); }
+        try { deck = await chatJson([{ role: 'system', content: system }, { role: 'user', content: user }], { key, signal: req.signal }); }
+        catch (e) { if (e.status === 401) return fail('bad_key', e.message); return fail('llm_failed', e.status === 429 ? 'The AI rate limit was reached. Wait a minute, then press Regenerate.' : 'The AI could not build this deck. Press Regenerate.'); }
         if (!Array.isArray(deck?.slides) || !deck.slides.length) return fail('llm_failed', 'The AI returned an empty deck. Press Regenerate.');
 
         // 4 — building slides
@@ -108,11 +112,13 @@ Make 7-9 slides; include exactly one slide with kind "architecture". Give 5-6 qa
 export async function PUT(req) {
   const refused = guard(req, { limit: 20, bucket: 'rw:' });
   if (refused) return refused;
+  const key = headerKey(req, 'x-llm-key');
+  if (!key) return noKey();
   const { text, mode } = await req.json().catch(() => ({}));
   const MODES = { shorter: 'Rewrite this about 40% shorter. Keep every fact.', technical: 'Rewrite this for a technical audience: name the actual components and how they connect. Keep every fact, add none.', simple: 'Rewrite this for a non-technical audience: no jargon, short sentences. Keep every fact, add none.' };
   if (typeof text !== 'string' || !text.trim() || text.length > 8000 || !MODES[mode]) return Response.json({ error: 'bad request' }, { status: 400 });
   try {
-    const j = await chatJson([{ role: 'system', content: MODES[mode] + ' Never invent numbers or claims. Reply ONLY JSON {"text":"..."}' }, { role: 'user', content: text }]);
+    const j = await chatJson([{ role: 'system', content: MODES[mode] + ' Never invent numbers or claims. Reply ONLY JSON {"text":"..."}' }, { role: 'user', content: text }], { key });
     return Response.json({ text: String(j.text || '') });
-  } catch (e) { return Response.json({ error: 'The AI could not rewrite this. Try again.' }, { status: 502 }); }
+  } catch (e) { return Response.json({ error: e.status === 401 ? e.message : 'The AI could not rewrite this. Try again.' }, { status: e.status === 401 ? 401 : 502 }); }
 }

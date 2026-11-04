@@ -6,14 +6,16 @@ import { Button, Badge, Card, Tabs, Alert, toast, cn } from './ui';
 
 const copy = async (text, what = 'Copied') => { await navigator.clipboard.writeText(text); toast(what + ' ✓'); };
 
-/** Plays text through the Boson TTS proxy; falls back to the browser voice if the proxy is unavailable. */
+/** Plays text through the Boson TTS proxy with the visitor's key; without a key, or on failure, uses the browser voice. */
 function PlayButton({ text }) {
   const [busy, setBusy] = useState(false), audio = useRef(null);
   const play = async () => {
     if (audio.current) { audio.current.pause(); audio.current = null; speechSynthesis.cancel(); return setBusy(false); }
     setBusy(true);
     try {
-      const r = await fetch('/api/tts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ input: text.slice(0, 1900) }) });
+      const bosonKey = useStore.getState().bosonKey;
+      if (!bosonKey) throw new Error('no key');
+      const r = await fetch('/api/tts', { method: 'POST', headers: { 'content-type': 'application/json', 'x-boson-key': bosonKey }, body: JSON.stringify({ input: text.slice(0, 1900) }) });
       if (!r.ok) throw new Error(r.status);
       const a = new Audio(URL.createObjectURL(await r.blob())); audio.current = a; a.onended = () => { audio.current = null; setBusy(false); }; await a.play();
     } catch { const u = new SpeechSynthesisUtterance(text); u.onend = () => setBusy(false); audio.current = { pause() {} }; speechSynthesis.speak(u); }
@@ -51,7 +53,7 @@ function PitchTab({ p }) {
   const rewrite = async (field, mode) => {
     setBusy(field + mode); setErr('');
     try {
-      const r = await fetch('/api/analyze', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: p.pitch[field], mode }) });
+      const r = await fetch('/api/analyze', { method: 'PUT', headers: { 'content-type': 'application/json', 'x-llm-key': useStore.getState().llmKey }, body: JSON.stringify({ text: p.pitch[field], mode }) });
       const j = await r.json(); if (!r.ok || !j.text) throw new Error(j.error || 'Rewrite failed');
       updateProject(p.id, x => ({ pitch: { ...x.pitch, [field]: j.text } })); track('pitch_rewritten', { field, mode }); toast('Rewritten ✓');
     } catch (e) { setErr(e.message); } finally { setBusy(''); }

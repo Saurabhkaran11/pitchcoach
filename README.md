@@ -4,9 +4,9 @@
 
 Built in one hour at [OSS4AI: Build an AI Startup in One Day](https://luma.com/oss4ai-fdvg) · Voice AI Track
 
-> 🎬 **2-min demo video:** [demo.mp4](demo.mp4) · **Instant scored demo:** https://saurabhkaran11.github.io/pitchcoach/?demo=1&qa=1&skin=glass
+> 🎬 **2-min demo video:** [demo.mp4](public/demo.mp4) · **Instant scored demo:** https://saurabhkaran11.github.io/pitchcoach/?demo=1&qa=1&skin=glass
 >
-> 👉 **Live app:** https://pitchcoach-five.vercel.app/ — no signup. Hit **▶ Try a demo pitch** to see it work in 5 seconds.
+> 👉 **Live app:** https://pitchcoach-five.vercel.app/ — no signup. Hit **▶ Try a demo pitch** to see it work in 5 seconds. Real scoring needs your own Gemini API key.
 
 ---
 
@@ -37,39 +37,45 @@ Founders practice their pitch in the mirror. The mirror doesn't tell you your ho
 
 - **Real voice AI, not a chatbot with a mic.** Speech in, cloned speech out, live coaching in between.
 - **The "wow" is instant.** Hearing your own voice deliver a better version of your pitch is something people remember.
-- **Zero friction.** One HTML file. No install, no backend, no account. Works on a phone.
+- **Zero friction.** No install and no account. Works on a phone. The demo pitch needs no key.
 - **Built on the sponsors' stack:**
   - **Boson AI — Higgs TTS 3** for speech and one-shot voice cloning (`ref_audio`)
-  - **Nebius Token Factory** for the investor brain (scoring, rewrite, Q&A)
+  - **Nebius Token Factory** for the investor brain (scoring, rewrite, Q&A) at the event. The app now uses Google Gemini.
 
 ## Run locally / deploy
 
 ```bash
 npm install
-cp .env.example .env.local   # gitignored
 npm run dev                 # http://localhost:8787  (voice coach at /, decks at /deck)
 node lib/github.test.mjs    # self-check for the repo URL parser + stack detection
 ```
-**Deploy on Vercel (recommended):** `vercel` — then set env vars `LLM_KEY` and `BOSON_KEY` (optional: `LLM_BASE`, `LLM_MODEL`; defaults: Gemini `gemini-3.6-flash`). Both keys stay server-side in `app/api/*/route.js` — visitors enter nothing. Any OpenAI-compatible LLM works (Gemini, Groq, Nebius, OpenRouter).
+## Deploy
 
-**GitHub Pages** (static, no `/api`): visitors paste an LLM key + Boson key in *Model settings* — stored in their browser only. Note: Gemini blocks browser-origin calls, so use Groq/Nebius there.
+Host on Vercel, or any host that runs Next.js. Run `npm run build` and `npm start`.
+
+No setting is required. Visitors bring their own AI keys.
+
+- **Visitor keys:** a Gemini key for scoring, rewrites and decks, and an optional Boson AI key for the cloned voice. They are pasted into the app, held in browser memory, sent only with a request to this app's own routes and never stored or logged. There is no server key fallback.
+- **Optional owner settings** (see `.env.example`): `GITHUB_TOKEN` raises the GitHub rate limit for public repos, `WAITLIST_WEBHOOK` receives waitlist emails, `LLM_MODEL` and `LLM_FALLBACK_MODEL` change the Gemini model, `ALLOWED_ORIGINS` allows extra API origins.
+
+A static copy such as GitHub Pages has no `/api` routes, so only the demo pitch works there.
 
 ## Try it in 60 seconds
 
 1. Open the live link in **Chrome** (mic + speech recognition).
 2. Tap **▶ Try a demo pitch** — see scoring, feedback and rewrite with no keys.
-3. For the full experience, open *Model settings* and paste a Nebius key + Boson key. Then tap the orb and pitch.
+3. For the full experience, open *Model settings* and paste your own Gemini key, plus a Boson key for the cloned voice. Then tap the orb and pitch.
 
 ## How it's built
 
 | Piece | Tech |
 |---|---|
 | Speech → text, live waveform, WPM & filler detection | Browser Web Speech + Web Audio APIs |
-| Investor scoring, rewrite, hardest question, answer grading | Nebius LLM (OpenAI-compatible) |
-| Rewrite read back in your cloned voice · question spoken aloud | Boson AI Higgs TTS 3 |
+| Investor scoring, rewrite, hardest question, answer grading | Google Gemini (OpenAI-compatible endpoint), through `/api/llm` |
+| Rewrite read back in your cloned voice · question spoken aloud | Boson AI Higgs TTS 3, through `/api/tts`. Browser voice without a key |
 | Attempt history, sparkline, shareable PNG scorecard | localStorage + canvas |
 
-Everything is in `index.html`. ~250 lines. No dependencies.
+The voice coach is `public/index.html` and `public/analysis.js`. The deck builder is a Next.js app under `app/deck`.
 
 ## The business
 
@@ -78,12 +84,14 @@ Everything is in `index.html`. ~250 lines. No dependencies.
 | **Who pays** | Founders raising a round (~500K new startups/yr in the US alone), accelerator cohorts, university pitch competitions, sales teams practicing demos |
 | **Pricing** | Free: 3 pitches/day. **Pro $12/mo:** unlimited, voice clone, investor Q&A, team mode. **Accelerator $99/mo:** cohort dashboard |
 | **Go-to-market** | Every scorecard is a shareable PNG → founders post their score on X/LinkedIn → free viral loop. Partner with accelerators for Demo Day prep |
-| **Cost to serve** | ~$0.02 per pitch (Nebius 70B + Boson TTS). 98% gross margin at Pro pricing |
+| **Cost to serve** | Not measured. Visitors currently pay their own AI costs through their own keys |
 | **Moat** | Attempt history + your cloned voice = switching cost. Every pitch scored makes the coach better |
 
-Already in the app: free-tier limit, Pro waitlist, privacy note, sponsor defaults prefilled.
+Already in the app: a browser-side daily limit, a Pro waitlist form and a privacy note. Pro plans and payments are not built.
 
 ## Judging criteria — how we map
+
+This table describes the build as submitted at the event.
 
 | Criterion | PitchCoach |
 |---|---|
@@ -96,7 +104,7 @@ Already in the app: free-tier limit, Pro waitlist, privacy note, sponsor default
 
 ## Production readiness
 
-Keys server-side, per-IP rate limits and origin checks on every endpoint, provider retry + model fallback, voice-clone consent, privacy & terms page, analytics. Full status and what is still open: [GTM.md](GTM.md).
+Visitor-supplied keys held in browser memory, per-IP rate limits and origin checks on every endpoint, provider retry + model fallback, voice-clone consent, privacy & terms page, analytics tag. Full status and what is still open: [GTM.md](GTM.md).
 
 ## What's next
 

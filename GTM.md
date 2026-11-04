@@ -9,7 +9,7 @@ Honest status. ✅ = built and tested. ⬜ = needs a decision, an account, or mo
 - ✅ Accessibility: typed mode, keyboard (space = mic), labels, readable contrast
 
 ## Safety, trust, reliability (done in code)
-- ✅ API keys server-side only (`api/llm.js`, `api/tts.js`); `keys.js` never deployed or committed
+- ✅ Visitors bring their own Gemini and Boson keys. They stay in browser memory, go only through `app/api/llm` and `app/api/tts`, and are never stored or logged
 - ✅ **Abuse guard** on every endpoint: same-site origin check + per-IP rate limit + input size caps — strangers can't burn your credits from another site
 - ✅ **Provider outages handled**: LLM proxy retries transient 429/5xx and falls back to a second model; the client retries once on unreadable AI output and shows plain-language errors
 - ✅ **Voice-clone consent**: one-time explicit OK before a recording leaves the browser; decline = standard voice
@@ -17,7 +17,7 @@ Honest status. ✅ = built and tested. ⬜ = needs a decision, an account, or mo
 - ✅ Vercel Web Analytics tag (turn it on: Vercel → project → Analytics → Enable)
 
 ## Needs you (cannot be done from code alone)
-- ⬜ **Rotate both API keys** — they were shared in chat. Then update `LLM_KEY` / `BOSON_KEY` on Vercel and redeploy.
+- ⬜ **Rotate both old API keys** — they were shared in chat. Then delete `LLM_KEY` / `BOSON_KEY` from Vercel. The app no longer reads them.
 - ⬜ **Waitlist destination**: set env `WAITLIST_WEBHOOK` to a Zapier / Make / Google Apps Script / Slack webhook URL. Until then signups are only saved in the visitor's browser (you never see them).
 - ⬜ **Hard global rate limit**: the guard is per server instance. Before real traffic, add Upstash Redis or Vercel KV (≈20 lines in `api/_guard.js`).
 - ⬜ **Accounts + payments** for Pro ($12/mo): Clerk or Supabase Auth + Stripe Checkout. Needs a Stripe account and a business entity. The 3/day limit is browser-side today, so it is a nudge, not a paywall.

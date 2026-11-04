@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore, track } from '@/lib/store';
-import { Page } from '@/components/Shell';
+import { Page, AIKeys } from '@/components/Shell';
 import { Button, Card, Progress, Skeleton, Alert, Input, Badge, cn } from '@/components/ui';
 
 const STEPS = ['Fetching files', 'Detecting stack', 'Summarizing code', 'Building slides'];
@@ -10,6 +10,8 @@ const STEPS = ['Fetching files', 'Detecting stack', 'Summarizing code', 'Buildin
 const BASE = [8, 30, 50, 92];
 
 const ERRORS = {
+  no_key: { title: 'Add your AI key', variant: 'warning', action: 'key' },
+  bad_key: { title: 'That AI key was rejected', variant: 'destructive', action: 'key' },
   invalid_url: { title: 'That URL is not a GitHub repo', variant: 'destructive', action: 'back' },
   private_or_missing: { title: 'Private repo, or it does not exist', variant: 'warning', action: 'token' },
   rate_limited: { title: 'GitHub rate limit reached', variant: 'warning', action: 'token' },
@@ -30,7 +32,7 @@ export default function Analyze() {
     const ac = new AbortController(); abortRef.current = ac;
     const timer = setTimeout(() => ac.abort('timeout'), 75_000);
     try {
-      const r = await fetch('/api/analyze', { method: 'POST', signal: ac.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify(job) });
+      const r = await fetch('/api/analyze', { method: 'POST', signal: ac.signal, headers: { 'content-type': 'application/json', 'x-llm-key': useStore.getState().llmKey }, body: JSON.stringify(job) });
       if (r.status === 429) throw { code: 'rate_limited', message: 'Too many decks in a minute. Wait a moment and retry.' };
       if (!r.ok || !r.body) throw { code: 'unknown', message: 'Server returned ' + r.status };
       const reader = r.body.getReader(), dec = new TextDecoder(); let buf = '';
@@ -86,6 +88,7 @@ export default function Analyze() {
           <Alert variant={E.variant} title={E.title} className="mt-6">
             <p>{error.message}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
+              {E.action === 'key' && (<><div className="w-full"><AIKeys /></div><Button size="sm" onClick={() => retry()}>Retry with this key</Button></>)}
               {E.action === 'token' && (<>
                 <label htmlFor="tok" className="sr-only">GitHub token</label>
                 <Input id="tok" type="password" autoComplete="off" placeholder="GitHub token with repo read access" value={token} onChange={e => setToken(e.target.value)} className="h-9 max-w-xs" />
@@ -95,7 +98,7 @@ export default function Analyze() {
               {E.action === 'shallow' && <Button size="sm" onClick={() => retry({ shallow: true })}>Retry in quick mode</Button>}
               {E.action === 'retry' && <Button size="sm" onClick={() => retry()}>{error.code === 'llm_failed' ? 'Regenerate' : 'Retry'}</Button>}
               {E.action === 'back' && <Button size="sm" onClick={cancel}>Fix the URL</Button>}
-              {E.action !== 'retry' && E.action !== 'back' && <Button size="sm" variant="ghost" onClick={() => retry()}>Try again as is</Button>}
+              {E.action !== 'retry' && E.action !== 'back' && E.action !== 'key' && <Button size="sm" variant="ghost" onClick={() => retry()}>Try again as is</Button>}
             </div>
           </Alert>
         )}
